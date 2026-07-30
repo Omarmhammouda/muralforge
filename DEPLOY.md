@@ -1,56 +1,60 @@
-# Putting MuralForge on your own URL — the 15-minute path
+# MuralForge on muralforge.com — Cloudflare + GitHub
 
-Four steps: GitHub → Vercel → two keys → your domain. No terminal needed.
+How the live site is wired, and everything needed to operate it.
 
-## 1. Put the code on GitHub (5 min)
+## The pipeline
 
-1. Sign in at github.com → **New repository** → name it `muralforge`, keep it **Private** → Create.
-2. On the empty repo page, click **"uploading an existing file"**.
-3. Drag ALL the files/folders from this project folder into the upload box
-   (`app`, `lib`, `package.json`, `next.config.mjs`, `jsconfig.json`, `.gitignore`,
-   `.env.example`, `README.md`, `DEPLOY.md`) → **Commit changes**.
+GitHub repo (`Omarmhammouda/muralforge`, branch `main`)
+→ Cloudflare Workers Builds (Next.js via OpenNext)
+→ **muralforge.com**
 
-## 2. Deploy on Vercel (3 min)
+Every push to `main` triggers an automatic build and deploy. A build takes
+roughly 2–5 minutes; until it finishes, the previous deployment keeps serving.
 
-1. Sign in at vercel.com **with your GitHub account** → **Add New → Project**.
-2. Pick the `muralforge` repo → framework auto-detects as Next.js → **Deploy**.
-3. First deploy will build and give you `muralforge-xxxx.vercel.app`. It won't
-   generate yet — it needs the two keys.
+## Environment variables — the part that bites
 
-## 3. Add the two keys (4 min)
+The app needs three values at runtime. They live in the Cloudflare dashboard:
+**Workers & Pages → muralforge → Settings → Variables and Secrets**.
 
-In the Vercel project → **Settings → Environment Variables**, add:
-
-| Name | Value |
+| Name | What it is |
 |---|---|
-| `GEMINI_API_KEY` | From **aistudio.google.com** → sign in with any Google account → **Get API key** → Create API key → copy. (Google bills ~4¢ per generated mockup; new accounts include free credit.) |
-| `APP_SECRET` | Any long random string — e.g. from **generate-secret.vercel.app/32** |
-| `INVITE_CODES` | Optional — `code:allowance` pairs like `laila:50,studio:200`. Visitors without a code get 3 free mockups. |
+| `GEMINI_API_KEY` | Google AI Studio key (billing must be enabled — the free tier has zero image quota) |
+| `APP_SECRET` | Long random string that signs the usage-quota cookie |
+| `INVITE_CODES` | `code:allowance` pairs, e.g. `laila:50,studio:200,owner:unlimited` |
 
-Then **Deployments → ⋯ on the latest → Redeploy** so the keys take effect.
-Test: open the site, upload a wall photo, describe a mural, Generate.
+**Always save them with type "Secret", never "Text".** Plain-text variables
+added in the dashboard are wiped by the next git deploy; Secrets survive
+every deploy. This is Cloudflare behavior, not ours, and it is the #1 cause
+of a sudden "Server is missing GEMINI_API_KEY" on the live site.
 
-## 4. Attach your domain (3 min)
+Changing a secret takes effect on its own — no rebuild needed.
 
-- In the Vercel project → **Settings → Domains** → add `muralforge.omhstudios.com`
-  (or whatever address you want).
-- Vercel shows you one DNS record (a CNAME to `cname.vercel-dns.com`).
-  Add it wherever omhstudios.com's DNS lives (GoDaddy / Namecheap / Cloudflare →
-  DNS → Add record → CNAME, name `muralforge`, value `cname.vercel-dns.com`).
-- Wait a few minutes — Vercel provisions HTTPS automatically. Done: MuralForge
-  is live on your URL.
+## Checking a deployment
+
+`https://muralforge.com/api/health` reports what the running worker sees:
+
+```json
+{ "marker": "health-v1", "env": { "GEMINI_API_KEY": true, "APP_SECRET": true, "INVITE_CODES": true } }
+```
+
+- Any `false` → that secret is missing on the worker serving the domain.
+- Homepage HTML instead of JSON → the deployment serving the domain predates
+  this endpoint; check the build status in the dashboard.
+
+Build logs live in **Workers & Pages → muralforge → Deployments** (or the
+Builds tab). The domain mapping is under **Settings → Domains & Routes**.
 
 ## Running costs
 
-- Vercel: free tier is plenty to start.
-- Gemini: ~4¢ per mockup, billed to your Google account — 3 free per visitor
-  plus whatever invite allowances you hand out are the only spend levers.
+- Cloudflare: free tier is plenty to start.
+- Gemini: ~4¢ per mockup, billed to the Google account behind the API key.
+  Spend is capped by the quota system: 3 free per visitor plus whatever
+  invite allowances are handed out.
 - No database, no other services.
 
-## Later upgrades (when you want them)
+## Later upgrades (when wanted)
 
-- **Charge users:** add Stripe payment links that email buyers an invite code —
+- **Charge users:** Stripe payment links that email buyers an invite code —
   zero code changes, just add codes to `INVITE_CODES`.
-- **Real accounts:** swap invite codes for Google sign-in + a database
-  (Vercel Postgres) — I can build that as v2.
-- **Harder abuse limits:** add Vercel KV for per-IP daily caps.
+- **Real accounts:** swap invite codes for Google sign-in + a database.
+- **Harder abuse limits:** Cloudflare KV for per-IP daily caps.

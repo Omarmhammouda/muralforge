@@ -18,4 +18,6 @@ npm run dev
 
 ## Deploy
 
-See `DEPLOY.md` — GitHub → Vercel → your domain, about 15 minutes end to end.
+Live at **muralforge.com** — GitHub → Cloudflare Workers (OpenNext), auto-deploys
+on every push to `main`. See `DEPLOY.md` for the wiring, env secrets, and the
+`/api/health` diagnostics endpoint.
