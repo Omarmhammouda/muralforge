@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MURAL_COVERAGE, MURAL_STYLES } from "@/lib/mural-prompt";
 import { formatBytes, optimizeWallPhoto } from "@/lib/optimize-photo";
 
@@ -19,6 +19,11 @@ export default function Home() {
   const [remaining, setRemaining] = useState(null);
   const [showBefore, setShowBefore] = useState(false);
   const [sizeNote, setSizeNote] = useState(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("mf_code");
+    if (saved) setCode(saved);
+  }, []);
 
   async function pickWall(file) {
     if (!file) return;
@@ -63,9 +68,12 @@ export default function Home() {
       }
       setResult(body.image);
       setHistory((previous) => [body.image, ...previous].slice(0, 8));
+      if (code.trim()) localStorage.setItem("mf_code", code.trim());
       setRemaining(
         body.tier === "code"
-          ? `${body.remaining} mockups left on this code`
+          ? body.remaining === null
+            ? "Unlimited mockups on this code"
+            : `${body.remaining} mockups left on this code`
           : `${body.remaining} free mockups left`,
       );
     } catch {
