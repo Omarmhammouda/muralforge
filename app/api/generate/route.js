@@ -1,3 +1,4 @@
+import { readEnv } from "@/lib/env";
 import { composeMuralPrompt } from "@/lib/mural-prompt";
 import {
   consumeGeneration,
@@ -35,7 +36,7 @@ function jsonWithQuota(body, status, nextState) {
 }
 
 export async function POST(request) {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = readEnv("GEMINI_API_KEY");
   if (!apiKey) {
     return jsonWithQuota({ ok: false, error: "Server is missing GEMINI_API_KEY." }, 500);
   }
