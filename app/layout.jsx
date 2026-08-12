@@ -1,9 +1,9 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "MuralForge",
+  title: "MuralForge — Mural Business Platform",
   description:
-    "Upload a wall photo, describe the mural, and see it painted on your actual wall — photoreal mockups for muralists and their clients.",
+    "Manage clients, projects, mural mockups, and professional proposals — the operating system for mural artists and studios.",
 };
 
 export default function RootLayout({ children }) {
