@@ -91,6 +91,9 @@ export default function Home() {
           <h1>MuralForge</h1>
           <div className="tag">by OMH Studios</div>
         </div>
+        <a className="ghost brand-cta" href="/proposal">
+          Proposal builder →
+        </a>
       </div>
 
       <div className="hero">
@@ -212,6 +215,18 @@ export default function Home() {
               <a className="ghost" href={result} download="muralforge-mockup.png">
                 Download
               </a>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => {
+                  try {
+                    sessionStorage.setItem("mf_proposal_mockup", result);
+                  } catch {}
+                  window.location.href = "/proposal";
+                }}
+              >
+                Use in proposal
+              </button>
             </div>
           ) : null}
           {history.length > 1 ? (
