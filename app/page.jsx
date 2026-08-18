@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import AppShell from "@/components/AppShell";
+import OnboardingModal from "@/components/OnboardingModal";
 import { money, timeAgo } from "@/lib/format";
 import { clientName, proposalTotals, useData } from "@/lib/store";
 
 export default function Dashboard() {
   const data = useData();
+  const [onboardDismissed, setOnboardDismissed] = useState(false);
   if (!data) return <AppShell title="Dashboard" />;
 
   const currency = data.settings.proposalDefaults.currency;
@@ -28,6 +31,9 @@ export default function Dashboard() {
 
   return (
     <AppShell title="Dashboard">
+      {data.billing && !data.billing.onboarded && !onboardDismissed ? (
+        <OnboardingModal onClose={() => setOnboardDismissed(true)} />
+      ) : null}
       {isEmpty ? (
         <div className="empty" style={{ marginBottom: 22 }}>
           <b>Welcome to MuralForge</b>

@@ -3,6 +3,8 @@
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppShell from "@/components/AppShell";
+import UpgradeModal from "@/components/UpgradeModal";
+import { exportPolicy } from "@/lib/billing";
 import { longDate, money, shortDate } from "@/lib/format";
 import { getImage } from "@/lib/images";
 import { effectiveStatus } from "@/lib/proposal-factory";
@@ -33,6 +35,7 @@ export default function ProposalBuilder() {
   const [tab, setTab] = useState("edit");
   const [saving, setSaving] = useState("");
   const [images, setImages] = useState({});
+  const [upgrade, setUpgrade] = useState(false);
   const loadedRef = useRef(false);
 
   useEffect(() => {
@@ -111,6 +114,22 @@ export default function ProposalBuilder() {
   }
 
   const heroSrc = selectedMockups[0] ? images[selectedMockups[0].id] || selectedMockups[0].thumb : null;
+  const docWatermark = exportPolicy(data, draft.projectId).watermark;
+
+  function doPrint() {
+    setTab("preview");
+    setTimeout(() => window.print(), 300);
+    actions.billingRecordUsage("pdfExports");
+  }
+
+  function exportPdf() {
+    const policy = exportPolicy(data, draft.projectId);
+    if (policy.watermark) {
+      setUpgrade(true);
+      return;
+    }
+    doPrint();
+  }
 
   return (
     <AppShell
@@ -130,7 +149,7 @@ export default function ProposalBuilder() {
             {PROPOSAL_STATUSES.map((status) => <option key={status}>{status}</option>)}
           </select>
           <button className="btn ghost" onClick={saveAsTemplate}>Save as template</button>
-          <button className="btn ghost" onClick={() => { setTab("preview"); setTimeout(() => window.print(), 300); }}>
+          <button className="btn ghost" onClick={exportPdf}>
             Export PDF
           </button>
           <button className="btn primary" onClick={sendProposal}>Send to client</button>
@@ -358,16 +377,27 @@ export default function ProposalBuilder() {
           selectedMockups={selectedMockups}
           images={images}
           heroSrc={heroSrc}
+          watermark={docWatermark}
         />
       )}
+
+      {upgrade ? (
+        <UpgradeModal
+          context="export"
+          projectId={draft.projectId || undefined}
+          onClose={() => setUpgrade(false)}
+          onContinueWatermark={doPrint}
+        />
+      ) : null}
     </AppShell>
   );
 }
 
-function ProposalDocument({ draft, client, project, settings, totals, selectedMockups, images, heroSrc }) {
+function ProposalDocument({ draft, client, project, settings, totals, selectedMockups, images, heroSrc, watermark }) {
   const { company, branding, proposalDefaults } = settings;
   const currency = proposalDefaults.currency;
   const extraMockups = selectedMockups.slice(1);
+  const wm = watermark ? <div className="doc-watermark">MURALFORGE PREVIEW</div> : null;
 
   return (
     <div
@@ -376,6 +406,7 @@ function ProposalDocument({ draft, client, project, settings, totals, selectedMo
     >
       {/* Page 1 — Cover */}
       <div className="doc-page doc-cover">
+        {wm}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           {branding.logo ? <img className="logo" src={branding.logo} alt="" /> : <div className="co-name">{company.name}</div>}
           <div style={{ textAlign: "right", color: "#5f6672", fontSize: 12.5 }}>
@@ -398,6 +429,7 @@ function ProposalDocument({ draft, client, project, settings, totals, selectedMo
 
       {/* Page 2 — Project overview */}
       <div className="doc-page">
+        {wm}
         <h2>Project Overview</h2>
         {draft.overview?.description ? <p className="pre">{draft.overview.description}</p> : null}
         <div className="meta-grid">
@@ -413,6 +445,7 @@ function ProposalDocument({ draft, client, project, settings, totals, selectedMo
       {/* Page 3 — Mural design */}
       {selectedMockups.length ? (
         <div className="doc-page">
+          {wm}
           <h2>Mural Design</h2>
           <img className="design-img" src={images[selectedMockups[0].id] || selectedMockups[0].thumb} alt={selectedMockups[0].name} />
           <div className="caption">{selectedMockups[0].name}</div>
@@ -438,6 +471,7 @@ function ProposalDocument({ draft, client, project, settings, totals, selectedMo
 
       {/* Page 4 — Scope & timeline */}
       <div className="doc-page">
+        {wm}
         <h2>Scope of Work</h2>
         {draft.scope.filter((s) => s.title || s.body).map((section) => (
           <div key={section.id} style={{ marginBottom: 16 }}>
@@ -456,6 +490,7 @@ function ProposalDocument({ draft, client, project, settings, totals, selectedMo
 
       {/* Page 5 — Investment */}
       <div className="doc-page">
+        {wm}
         <h2>Investment</h2>
         <table className="pricing">
           <thead>
@@ -489,6 +524,7 @@ function ProposalDocument({ draft, client, project, settings, totals, selectedMo
 
       {/* Page 6 — Terms & approval */}
       <div className="doc-page">
+        {wm}
         <h2>Terms &amp; Conditions</h2>
         <p className="pre">{draft.terms}</p>
         <h2 style={{ marginTop: 40 }}>Approval</h2>

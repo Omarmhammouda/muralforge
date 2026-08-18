@@ -295,6 +295,111 @@ select.search { min-width: 140px; }
 .doc .sig-row { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 50px; }
 .doc .sig div { border-top: 1.5px solid #16181d; padding-top: 8px; font-size: 12px; color: #5f6672; margin-top: 44px; }
 
+/* ---------- Pricing ---------- */
+
+.pricing-hero { text-align: center; margin: 26px auto 30px; max-width: 620px; }
+.pricing-hero h2 { font-size: clamp(28px, 4vw, 42px); letter-spacing: -1px; line-height: 1.08; }
+.pricing-hero p { color: var(--mute); font-size: 15px; line-height: 1.6; margin: 12px 0 0; }
+
+.interval-toggle {
+  display: inline-flex; background: #eef0f3; border-radius: 999px; padding: 4px;
+  margin: 22px auto 0; gap: 2px;
+}
+.interval-toggle button {
+  border: 0; background: transparent; border-radius: 999px; padding: 8px 18px;
+  font: inherit; font-size: 13px; font-weight: 600; color: var(--mute); cursor: pointer;
+}
+.interval-toggle button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.interval-toggle .hint-save { color: #067647; font-weight: 700; }
+
+.plan-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 28px 0; align-items: stretch; }
+@media (max-width: 1100px) { .plan-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .plan-grid { grid-template-columns: 1fr; } }
+
+.plan-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+  padding: 24px 22px; box-shadow: var(--shadow); display: flex; flex-direction: column;
+  position: relative;
+}
+.plan-card.popular { border-color: var(--accent); box-shadow: 0 8px 30px rgba(15, 118, 110, 0.14); }
+.plan-card .pop-tag {
+  position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+  background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.8px; padding: 4px 12px; border-radius: 999px; white-space: nowrap;
+}
+.plan-card h4 { margin: 0; font-size: 16px; }
+.plan-card .tagline { color: var(--mute); font-size: 12.5px; margin: 4px 0 14px; line-height: 1.45; min-height: 34px; }
+.plan-card .price { font-size: 30px; font-weight: 750; letter-spacing: -0.5px; }
+.plan-card .price small { font-size: 13px; color: var(--mute); font-weight: 500; }
+.plan-card .price-note { color: var(--mute); font-size: 12px; min-height: 16px; margin-top: 2px; }
+.plan-card ul { list-style: none; padding: 0; margin: 16px 0 18px; display: flex; flex-direction: column; gap: 7px; }
+.plan-card li { font-size: 13px; color: #333c48; padding-left: 20px; position: relative; }
+.plan-card li::before { content: "✓"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+.plan-card .btn { margin-top: auto; justify-content: center; }
+
+.founding-banner {
+  border: 1.5px solid #b54708; background: #fffaf5; border-radius: 16px;
+  padding: 20px 24px; margin: 6px 0 26px; display: flex; gap: 18px; align-items: center;
+  flex-wrap: wrap;
+}
+.founding-banner .fb-body { flex: 1; min-width: 240px; }
+.founding-banner b { font-size: 15px; }
+.founding-banner p { margin: 4px 0 0; color: #7a5540; font-size: 13px; }
+.founding-banner .count { font-size: 12px; font-weight: 700; color: #b54708; }
+
+.compare-wrap { overflow-x: auto; }
+.compare { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
+.compare th { text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--ink); font-size: 12.5px; }
+.compare th:not(:first-child), .compare td:not(:first-child) { text-align: center; }
+.compare td { padding: 10px 12px; border-bottom: 1px solid var(--line); color: #333c48; }
+.compare td:first-child { color: var(--mute); font-weight: 500; }
+.compare .col-pop { background: var(--accent-soft); }
+
+/* ---------- Billing & usage ---------- */
+
+.meter { margin: 10px 0; }
+.meter .meter-head { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--mute); margin-bottom: 5px; }
+.meter .meter-head b { color: var(--ink); font-weight: 600; }
+.meter .bar { height: 7px; background: #eef0f3; border-radius: 999px; overflow: hidden; }
+.meter .bar i {
+  display: block; height: 100%; border-radius: 999px; background: var(--accent);
+  transition: width 0.3s;
+}
+.meter.warn .bar i { background: #b54708; }
+
+.plan-pill {
+  display: inline-flex; align-items: center; gap: 7px; background: var(--accent-soft);
+  color: var(--accent-ink); border: 1px solid #b8e6de; border-radius: 999px;
+  padding: 5px 14px; font-weight: 700; font-size: 13px;
+}
+.founding-badge {
+  display: inline-block; background: #fffaeb; color: #b54708; border: 1px solid #fedf89;
+  border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 700;
+}
+
+/* ---------- Paywall ---------- */
+
+.paywall { text-align: center; padding: 8px 6px 2px; }
+.paywall h2 { font-size: 19px; margin-bottom: 8px; }
+.paywall p { color: var(--mute); font-size: 13.5px; line-height: 1.6; margin: 0 auto 18px; max-width: 400px; }
+.paywall .pw-actions { display: flex; flex-direction: column; gap: 8px; max-width: 340px; margin: 0 auto; }
+.paywall .pw-actions .btn { justify-content: center; }
+.paywall .pw-alt { color: var(--mute); font-size: 12.5px; margin-top: 12px; }
+.paywall .pw-alt a, .paywall .pw-alt button {
+  background: none; border: 0; color: var(--accent-ink); font: inherit; font-size: 12.5px;
+  cursor: pointer; text-decoration: underline;
+}
+.checkout-summary {
+  text-align: left; border: 1px solid var(--line); border-radius: 12px; padding: 16px;
+  margin-bottom: 14px; background: #fafbfc;
+}
+.checkout-summary .row-line { display: flex; justify-content: space-between; font-size: 13.5px; padding: 4px 0; }
+.checkout-summary .row-line.total { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 10px; font-weight: 700; }
+.demo-note {
+  background: #fffaeb; border: 1px solid #fedf89; color: #7a5540; border-radius: 8px;
+  padding: 8px 12px; font-size: 12px; margin-bottom: 12px; text-align: left;
+}
+
 /* ---------- Print ---------- */
 
 @media print {
@@ -305,3 +410,6 @@ select.search { min-width: 140px; }
   .doc-page { border-bottom: 0; page-break-after: always; padding: 24px 8px; min-height: 0; }
   .doc-page:last-child { page-break-after: auto; }
 }
+
+.doc-page { position: relative; }
+.doc-watermark { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; font-size: 46px; font-weight: 800; letter-spacing: 4px; color: rgba(16,24,40,0.08); transform: rotate(-18deg); }

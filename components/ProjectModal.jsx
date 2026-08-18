@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import UpgradeModal from "@/components/UpgradeModal";
+import { canCreateProject } from "@/lib/billing";
 import { PROJECT_STATUSES, actions, newId } from "@/lib/store";
 
 const BLANK = {
@@ -10,13 +12,29 @@ const BLANK = {
 
 export default function ProjectModal({ data, initial, onClose, onSaved }) {
   const [form, setForm] = useState({ ...BLANK, ...initial });
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const pendingId = useRef(null);
   const set = (key) => (event) => setForm((f) => ({ ...f, [key]: event.target.value }));
+
+  function persist() {
+    const isNew = !form.id;
+    const record = actions.upsertProject({ id: form.id || pendingId.current || newId(), ...form });
+    if (isNew) actions.billingRecordUsage("projectsCreated");
+    onSaved?.(record);
+    onClose();
+  }
 
   function save() {
     if (!form.name.trim()) return;
-    const record = actions.upsertProject({ id: form.id || newId(), ...form });
-    onSaved?.(record);
-    onClose();
+    if (!form.id) {
+      if (!pendingId.current) pendingId.current = newId();
+      const check = canCreateProject(data);
+      if (!check.ok) {
+        setShowUpgrade(true);
+        return;
+      }
+    }
+    persist();
   }
 
   return (
@@ -50,6 +68,14 @@ export default function ProjectModal({ data, initial, onClose, onSaved }) {
           <button className="btn ghost" onClick={onClose}>Cancel</button>
           <button className="btn primary" onClick={save}>Save project</button>
         </div>
+        {showUpgrade ? (
+          <UpgradeModal
+            context="project"
+            projectId={pendingId.current}
+            onClose={() => setShowUpgrade(false)}
+            onUnlocked={persist}
+          />
+        ) : null}
       </div>
     </div>
   );

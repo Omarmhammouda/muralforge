@@ -3,6 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import AppShell from "@/components/AppShell";
+import UpgradeModal from "@/components/UpgradeModal";
+import { canCreateMockup, consumePassExport, exportPolicy, watermarkDataUrl } from "@/lib/billing";
 import { getImage, makeThumb, putImage } from "@/lib/images";
 import { optimizeWallPhoto } from "@/lib/optimize-photo";
 import { MURAL_COVERAGE, MURAL_STYLES } from "@/lib/mural-prompt";
@@ -52,6 +54,8 @@ function StudioInner() {
   const [projectId, setProjectId] = useState("");
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState("");
+  const [upgrade, setUpgrade] = useState(null); // { context, onContinueWatermark? }
+  const [exportNote, setExportNote] = useState("");
 
   // Overlay state
   const [wall, setWall] = useState(null); // { src, naturalW, naturalH }
@@ -224,12 +228,20 @@ function StudioInner() {
 
   async function saveMockup(draft) {
     try {
+      if (!editId) {
+        const check = canCreateMockup(data, projectId || null);
+        if (!check.ok) {
+          setUpgrade({ context: "mockups" });
+          return;
+        }
+      }
       setSaving("saving");
       const image = mode === "ai" ? aiResult : await composeOverlay();
       if (!image) {
         setSaving("");
         return;
       }
+      const isNew = !editId;
       const id = editId || newId();
       await putImage(id, image);
       const thumb = await makeThumb(image);
@@ -241,6 +253,7 @@ function StudioInner() {
         draft,
         thumb,
       });
+      if (isNew) actions.billingRecordUsage("mockups");
       setEditId(id);
       setSaving("saved");
       setTimeout(() => setSaving(""), 2000);
@@ -250,18 +263,45 @@ function StudioInner() {
     }
   }
 
-  async function downloadMockup() {
-    const image = mode === "ai" ? aiResult : await composeOverlay();
-    if (!image) return;
+  function triggerDownload(image) {
     const link = document.createElement("a");
     link.href = image;
     link.download = `${name.trim() || "mockup"}.jpg`;
     link.click();
   }
 
+  async function downloadMockup() {
+    const image = mode === "ai" ? aiResult : await composeOverlay();
+    if (!image) return;
+    const policy = exportPolicy(data, projectId || null);
+    if (!policy.ok && policy.reason === "pass-exports") {
+      setUpgrade({ context: "pass-exports" });
+      return;
+    }
+    if (policy.watermark) {
+      setUpgrade({
+        context: "watermark",
+        onContinueWatermark: async () => {
+          triggerDownload(await watermarkDataUrl(image));
+        },
+      });
+      return;
+    }
+    if (policy.passId) {
+      consumePassExport(policy.passId);
+      if (policy.remainingExports != null) {
+        setExportNote(`${Math.max(0, policy.remainingExports - 1)} pass exports left`);
+        setTimeout(() => setExportNote(""), 4000);
+      }
+    }
+    triggerDownload(image);
+  }
+
   async function generate() {
     if (!aiWall?.file) return setError("Attach a wall photo first.");
     if (description.trim().length < 3) return setError("Describe the mural in a few words.");
+    const check = canCreateMockup(data, projectId || null);
+    if (!check.ok) return setUpgrade({ context: "mockups" });
     setBusy(true);
     setError(null);
     try {
@@ -301,6 +341,7 @@ function StudioInner() {
         <>
           {saving === "saving" ? <span className="saving-note">Saving…</span> : null}
           {saving === "saved" ? <span className="saving-note saved">Saved ✓</span> : null}
+          {exportNote ? <span className="saving-note">{exportNote}</span> : null}
           <button className="btn ghost" onClick={() => saveMockup(true)}>Save draft</button>
           <button className="btn primary" onClick={() => saveMockup(false)}>Save final</button>
         </>
@@ -561,6 +602,15 @@ function StudioInner() {
           </div>
         </div>
       )}
+
+      {upgrade ? (
+        <UpgradeModal
+          context={upgrade.context}
+          projectId={projectId || null}
+          onClose={() => setUpgrade(null)}
+          onContinueWatermark={upgrade.onContinueWatermark}
+        />
+      ) : null}
     </AppShell>
   );
 }

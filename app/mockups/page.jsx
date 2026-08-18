@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import AppShell from "@/components/AppShell";
+import UpgradeModal from "@/components/UpgradeModal";
+import { canCreateMockup, consumePassExport, exportPolicy, watermarkDataUrl } from "@/lib/billing";
 import { shortDate } from "@/lib/format";
 import { getImage, putImage } from "@/lib/images";
 import { actions, clientName, newId, projectName, useData } from "@/lib/store";
@@ -11,6 +13,7 @@ export default function MockupsPage() {
   const [query, setQuery] = useState("");
   const [projectFilter, setProjectFilter] = useState("");
   const [sort, setSort] = useState("newest");
+  const [upgrade, setUpgrade] = useState(null); // { context, projectId, onContinueWatermark? }
 
   if (!data) return <AppShell title="Mockups" />;
 
@@ -28,19 +31,45 @@ export default function MockupsPage() {
     );
 
   async function duplicate(mockup) {
+    const check = canCreateMockup(data, mockup.projectId || null);
+    if (!check.ok) {
+      setUpgrade({ context: "mockups", projectId: mockup.projectId || null });
+      return;
+    }
     const image = await getImage(mockup.id);
     const id = newId();
     if (image) await putImage(id, image);
     actions.upsertMockup({ ...mockup, id, name: `${mockup.name} (copy)` });
+    actions.billingRecordUsage("mockups");
+  }
+
+  function triggerDownload(image, filename) {
+    const link = document.createElement("a");
+    link.href = image;
+    link.download = `${filename}.jpg`;
+    link.click();
   }
 
   async function download(mockup) {
     const image = await getImage(mockup.id);
     if (!image) return;
-    const link = document.createElement("a");
-    link.href = image;
-    link.download = `${mockup.name}.jpg`;
-    link.click();
+    const policy = exportPolicy(data, mockup.projectId || null);
+    if (!policy.ok && policy.reason === "pass-exports") {
+      setUpgrade({ context: "pass-exports", projectId: mockup.projectId || null });
+      return;
+    }
+    if (policy.watermark) {
+      setUpgrade({
+        context: "watermark",
+        projectId: mockup.projectId || null,
+        onContinueWatermark: async () => {
+          triggerDownload(await watermarkDataUrl(image), mockup.name);
+        },
+      });
+      return;
+    }
+    if (policy.passId) consumePassExport(policy.passId);
+    triggerDownload(image, mockup.name);
   }
 
   return (
@@ -105,6 +134,15 @@ export default function MockupsPage() {
           <a className="btn primary" href="/studio">Create Mockup</a>
         </div>
       )}
+
+      {upgrade ? (
+        <UpgradeModal
+          context={upgrade.context}
+          projectId={upgrade.projectId}
+          onClose={() => setUpgrade(null)}
+          onContinueWatermark={upgrade.onContinueWatermark}
+        />
+      ) : null}
     </AppShell>
   );
 }

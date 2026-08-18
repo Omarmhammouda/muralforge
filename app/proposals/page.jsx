@@ -3,12 +3,15 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import AppShell from "@/components/AppShell";
+import UpgradeModal from "@/components/UpgradeModal";
+import { canCreateProposal } from "@/lib/billing";
 import { money, shortDate } from "@/lib/format";
 import { createProposal, effectiveStatus } from "@/lib/proposal-factory";
 import {
   PROPOSAL_STATUSES,
   actions,
   clientName,
+  getState,
   newId,
   projectName,
   proposalTotals,
@@ -23,15 +26,25 @@ function ProposalsInner() {
   const [statusFilter, setStatusFilter] = useState("");
   const [sort, setSort] = useState("newest");
   const creating = useRef(false);
+  const [upgrade, setUpgrade] = useState(null); // { projectId, opts } | { projectId, duplicateOf }
 
   useEffect(() => {
     if (params.get("new") === "1" && !creating.current) {
       creating.current = true;
-      const record = createProposal({
+      const opts = {
         clientId: params.get("client") || "",
         projectId: params.get("project") || "",
         mockupIds: params.get("mockup") ? [params.get("mockup")] : [],
-      });
+      };
+      const check = canCreateProposal(getState(), opts.projectId || null);
+      if (!check.ok) {
+        setUpgrade({ projectId: opts.projectId || null, opts });
+        router.replace("/proposals");
+        return;
+      }
+      const record = createProposal(opts);
+      if (check.passId) actions.billingUpdatePass(check.passId, { proposalUsed: true });
+      actions.billingRecordUsage("proposals");
       router.replace(`/proposals/${record.id}`);
     }
   }, [params, router]);
@@ -52,7 +65,20 @@ function ProposalsInner() {
       return new Date(b.updatedAt) - new Date(a.updatedAt);
     });
 
-  function duplicate(proposal) {
+  function startProposal(opts = {}) {
+    const projectId = opts.projectId || null;
+    const check = canCreateProposal(data || getState(), projectId);
+    if (!check.ok) {
+      setUpgrade({ projectId, opts });
+      return;
+    }
+    const record = createProposal(opts);
+    if (check.passId) actions.billingUpdatePass(check.passId, { proposalUsed: true });
+    actions.billingRecordUsage("proposals");
+    router.push(`/proposals/${record.id}`);
+  }
+
+  function cloneProposal(proposal) {
     const record = {
       ...structuredClone(proposal),
       id: newId(),
@@ -63,6 +89,19 @@ function ProposalsInner() {
       issueDate: new Date().toISOString(),
     };
     actions.upsertProposal(record);
+    return record;
+  }
+
+  function duplicate(proposal) {
+    const projectId = proposal.projectId || null;
+    const check = canCreateProposal(data || getState(), projectId);
+    if (!check.ok) {
+      setUpgrade({ projectId, duplicateOf: proposal });
+      return;
+    }
+    const record = cloneProposal(proposal);
+    if (check.passId) actions.billingUpdatePass(check.passId, { proposalUsed: true });
+    actions.billingRecordUsage("proposals");
     router.push(`/proposals/${record.id}`);
   }
 
@@ -70,13 +109,7 @@ function ProposalsInner() {
     <AppShell
       title="Proposals"
       actions={
-        <button
-          className="btn primary"
-          onClick={() => {
-            const record = createProposal();
-            router.push(`/proposals/${record.id}`);
-          }}
-        >
+        <button className="btn primary" onClick={() => startProposal()}>
           + Create Proposal
         </button>
       }
@@ -134,17 +167,29 @@ function ProposalsInner() {
         <div className="empty">
           <b>No proposals yet</b>
           <p>Create a professional proposal with your mural designs, scope, timeline, and pricing.</p>
-          <button
-            className="btn primary"
-            onClick={() => {
-              const record = createProposal();
-              router.push(`/proposals/${record.id}`);
-            }}
-          >
+          <button className="btn primary" onClick={() => startProposal()}>
             Create Proposal
           </button>
         </div>
       )}
+
+      {upgrade ? (
+        <UpgradeModal
+          context="proposals"
+          projectId={upgrade.projectId || undefined}
+          onClose={() => setUpgrade(null)}
+          onUnlocked={() => {
+            const check = canCreateProposal(getState(), upgrade.projectId);
+            if (!check.ok) return;
+            const record = upgrade.duplicateOf
+              ? cloneProposal(upgrade.duplicateOf)
+              : createProposal(upgrade.opts || {});
+            if (check.passId) actions.billingUpdatePass(check.passId, { proposalUsed: true });
+            actions.billingRecordUsage("proposals");
+            router.push(`/proposals/${record.id}`);
+          }}
+        />
+      ) : null}
     </AppShell>
   );
 }
