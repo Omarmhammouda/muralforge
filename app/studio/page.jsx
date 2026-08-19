@@ -50,6 +50,7 @@ function StudioInner() {
   const params = useSearchParams();
 
   const [mode, setMode] = useState("overlay");
+  const [started, setStarted] = useState(false);
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState("");
   const [editId, setEditId] = useState(null);
@@ -126,7 +127,7 @@ function StudioInner() {
     const src = await readAsDataUrl(optimized.file);
     const img = await loadImage(src);
     setWall({ src, naturalW: img.naturalWidth, naturalH: img.naturalHeight });
-    setArt(null);
+    baseCorners.current = null;
     setCorners(null);
   }
 
@@ -149,6 +150,23 @@ function StudioInner() {
       ]);
     }
   }
+
+  // Artwork can be added before the wall photo; once the stage exists
+  // (or a replaced wall resizes it), place any unplaced artwork centered.
+  useEffect(() => {
+    if (!stage || !art || corners) return;
+    const width = stage.w * 0.55;
+    const height = width * (art.naturalH / art.naturalW);
+    const x = (stage.w - width) / 2;
+    const y = (stage.h - height) / 2;
+    rebase([
+      { x, y },
+      { x: x + width, y },
+      { x: x + width, y: y + height },
+      { x, y: y + height },
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, art, corners]);
 
   function onWallLoad() {
     const el = wallImgRef.current;
@@ -330,23 +348,54 @@ function StudioInner() {
     }
   }
 
-  if (!data) return <AppShell title="Mockup Studio" />;
+  if (!data) return <AppShell title="Mockup Studio" subtitle="Put your mural on a real wall" />;
 
   const projectOptions = data.projects.filter((p) => p.status !== "Archived");
+  const showStart = !started && !editId && !params.get("edit") && !wall && !aiResult;
 
   return (
     <AppShell
       title="Mockup Studio"
+      subtitle="Put your mural on a real wall"
       actions={
-        <>
-          {saving === "saving" ? <span className="saving-note">Saving…</span> : null}
-          {saving === "saved" ? <span className="saving-note saved">Saved ✓</span> : null}
-          {exportNote ? <span className="saving-note">{exportNote}</span> : null}
-          <button className="btn ghost" onClick={() => saveMockup(true)}>Save draft</button>
-          <button className="btn primary" onClick={() => saveMockup(false)}>Save final</button>
-        </>
+        showStart ? null : (
+          <>
+            {saving === "saving" ? <span className="saving-note">Saving…</span> : null}
+            {saving === "saved" ? <span className="saving-note saved">Saved ✓</span> : null}
+            {exportNote ? <span className="saving-note">{exportNote}</span> : null}
+            <button className="btn ghost" onClick={() => saveMockup(true)}>Save draft</button>
+            <button className="btn primary" onClick={() => saveMockup(false)}>Save final</button>
+          </>
+        )
       }
     >
+      {showStart ? (
+        <div className="choice-grid">
+          <button
+            type="button"
+            className="choice"
+            onClick={() => {
+              setMode("overlay");
+              setStarted(true);
+            }}
+          >
+            <b>Upload my artwork</b>
+            <span>Place your own design on a wall photo and fit it to the wall&apos;s perspective.</span>
+          </button>
+          <button
+            type="button"
+            className="choice"
+            onClick={() => {
+              setMode("ai");
+              setStarted(true);
+            }}
+          >
+            <b>Generate with AI</b>
+            <span>No artwork yet? Describe the mural and AI paints it onto your wall photo.</span>
+          </button>
+        </div>
+      ) : (
+      <>
       <div className="toolbar">
         <div className="seg">
           <button className={mode === "overlay" ? "on" : ""} onClick={() => setMode("overlay")}>
@@ -371,6 +420,20 @@ function StudioInner() {
         </select>
         <button className="btn ghost" onClick={downloadMockup}>Download</button>
       </div>
+
+      {mode === "overlay" ? (
+        <div className="steps-rail">
+          <div className={`step-chip${wall ? " done" : " active"}`}>
+            <span className="n">1</span>Wall photo
+          </div>
+          <div className={`step-chip${wall && art ? " done" : wall ? " active" : ""}`}>
+            <span className="n">2</span>Your artwork
+          </div>
+          <div className={`step-chip${wall && art ? " active" : ""}`}>
+            <span className="n">3</span>Fine-tune &amp; save
+          </div>
+        </div>
+      ) : null}
 
       {mode === "overlay" ? (
         <div className="studio-layout">
@@ -451,7 +514,7 @@ function StudioInner() {
             {art ? (
               <>
                 <div className="card">
-                  <h3>Transform</h3>
+                  <h3>Size &amp; angle</h3>
                   <p className="saving-note" style={{ marginTop: -6, marginBottom: 8 }}>
                     Drag artwork to move · drag corners for perspective
                   </p>
@@ -478,7 +541,7 @@ function StudioInner() {
                 </div>
 
                 <div className="card">
-                  <h3>Adjust</h3>
+                  <h3>Blend into the wall</h3>
                   {[
                     ["Opacity", "opacity", 10, 100],
                     ["Brightness", "brightness", 40, 160],
@@ -553,7 +616,7 @@ function StudioInner() {
               </label>
             </div>
             <div className="card">
-              <h3>The mural</h3>
+              <h3>Describe the mural</h3>
               <textarea
                 className="search"
                 style={{ width: "100%", minHeight: 90, resize: "vertical" }}
@@ -601,6 +664,8 @@ function StudioInner() {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
 
       {upgrade ? (

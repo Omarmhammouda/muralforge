@@ -14,15 +14,30 @@ const ICONS = {
   settings: "M19.14 12.94a7 7 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.05 7.05 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.5.42l-.36 2.54c-.58.24-1.13.55-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7 7 0 0 0 0 1.88L2.82 14.5a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.6.22l2.4-.96c.5.39 1.04.7 1.62.94l.36 2.54c.04.24.25.42.5.42h3.8c.25 0 .46-.18.5-.42l.36-2.54c.58-.24 1.13-.55 1.63-.94l2.39.96c.22.09.48 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.56zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z",
 };
 
-const NAV = [
-  { href: "/", label: "Dashboard", icon: "dashboard" },
-  { href: "/projects", label: "Projects", icon: "projects" },
-  { href: "/mockups", label: "Mockups", icon: "mockups" },
-  { href: "/proposals", label: "Proposals", icon: "proposals" },
-  { href: "/clients", label: "Clients", icon: "clients" },
-  { href: "/templates", label: "Templates", icon: "templates" },
-  { href: "/billing", label: "Billing", icon: "billing" },
-  { href: "/settings", label: "Settings", icon: "settings" },
+const NAV_GROUPS = [
+  {
+    label: "WORK",
+    items: [
+      { href: "/", label: "Dashboard", icon: "dashboard" },
+      { href: "/projects", label: "Projects", icon: "projects" },
+      { href: "/clients", label: "Clients", icon: "clients" },
+    ],
+  },
+  {
+    label: "CREATE",
+    items: [
+      { href: "/mockups", label: "Mockups", icon: "mockups" },
+      { href: "/proposals", label: "Proposals", icon: "proposals" },
+      { href: "/templates", label: "Templates", icon: "templates" },
+    ],
+  },
+  {
+    label: "ACCOUNT",
+    items: [
+      { href: "/billing", label: "Billing", icon: "billing" },
+      { href: "/settings", label: "Settings", icon: "settings" },
+    ],
+  },
 ];
 
 function Icon({ name }) {
@@ -33,7 +48,7 @@ function Icon({ name }) {
   );
 }
 
-export default function AppShell({ title, actions, children }) {
+export default function AppShell({ title, subtitle, actions, children }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -49,15 +64,20 @@ export default function AppShell({ title, actions, children }) {
           <span>MuralForge</span>
         </a>
         <nav>
-          {NAV.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className={`side-link${isActive(item.href) ? " active" : ""}`}
-            >
-              <Icon name={item.icon} />
-              {item.label}
-            </a>
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label}>
+              <div className="side-group">{group.label}</div>
+              {group.items.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className={`side-link${isActive(item.href) ? " active" : ""}`}
+                >
+                  <Icon name={item.icon} />
+                  {item.label}
+                </a>
+              ))}
+            </div>
           ))}
         </nav>
         <a className="side-link side-studio" href="/studio">
@@ -75,7 +95,10 @@ export default function AppShell({ title, actions, children }) {
           >
             ☰
           </button>
-          <h1>{title}</h1>
+          <div>
+            <h1>{title}</h1>
+            {subtitle ? <div className="page-sub">{subtitle}</div> : null}
+          </div>
           <div className="topbar-actions">{actions}</div>
         </header>
         <div className="content">{children}</div>

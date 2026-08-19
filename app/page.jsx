@@ -26,45 +26,66 @@ export default function Dashboard() {
     (sum, p) => sum + proposalTotals(p, data.settings).total,
     0,
   );
-  const isEmpty =
-    !data.clients.length && !data.projects.length && !data.proposals.length && !data.mockups.length;
+  const steps = [
+    {
+      num: 1,
+      title: "Add a client",
+      done: data.clients.length > 0,
+      doneText: `${data.clients.length} client(s)`,
+      todoText: "Keep contacts in one place",
+      href: "/clients?new=1",
+      label: "Add client",
+    },
+    {
+      num: 2,
+      title: "Create a project",
+      done: data.projects.length > 0,
+      doneText: `${data.projects.length} project(s)`,
+      todoText: "One workspace per wall",
+      href: "/projects?new=1",
+      label: "New project",
+    },
+    {
+      num: 3,
+      title: "Make a mockup",
+      done: data.mockups.length > 0,
+      doneText: `${data.mockups.length} mockup(s)`,
+      todoText: "See it on the real wall",
+      href: "/studio",
+      label: "Open studio",
+    },
+    {
+      num: 4,
+      title: "Send a proposal",
+      done: data.proposals.length > 0,
+      doneText: `${data.proposals.length} proposal(s)`,
+      todoText: "Scope, pricing, signature",
+      href: "/proposals?new=1",
+      label: "New proposal",
+    },
+  ];
+  const nextIndex = steps.findIndex((s) => !s.done);
 
   return (
-    <AppShell title="Dashboard">
+    <AppShell title="Dashboard" subtitle="Your mural business at a glance">
       {data.billing && !data.billing.onboarded && !onboardDismissed ? (
         <OnboardingModal onClose={() => setOnboardDismissed(true)} />
       ) : null}
-      {isEmpty ? (
-        <div className="empty" style={{ marginBottom: 22 }}>
-          <b>Welcome to MuralForge</b>
-          <p>
-            Your mural business in one place — clients, projects, realistic wall mockups, and
-            professional proposals. Start wherever you like; everything connects.
-          </p>
-          <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-            <a className="btn primary" href="/clients?new=1">Add Your First Client</a>
-            <a className="btn ghost" href="/studio">Create a Mockup</a>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="quick-actions">
-        <a className="quick-action" href="/projects?new=1">
-          <b>+ New Project</b>
-          <span>Start a mural project workspace</span>
-        </a>
-        <a className="quick-action" href="/studio">
-          <b>+ Create Mockup</b>
-          <span>Visualize art on a real wall</span>
-        </a>
-        <a className="quick-action" href="/proposals?new=1">
-          <b>+ Create Proposal</b>
-          <span>Scope, pricing, and terms</span>
-        </a>
-        <a className="quick-action" href="/clients?new=1">
-          <b>+ Add Client</b>
-          <span>Keep contacts organized</span>
-        </a>
+      <div className="flow">
+        {steps.map((step, i) => {
+          const isNext = i === nextIndex;
+          const cls = step.done ? "flow-step done" : isNext ? "flow-step next" : "flow-step";
+          return (
+            <div className={cls} key={step.num}>
+              <span className="num">{step.done ? "✓" : step.num}</span>
+              <b>{step.title}</b>
+              <span>{step.done ? step.doneText : step.todoText}</span>
+              <a className={isNext ? "btn primary" : "btn ghost mini"} href={step.href}>
+                {step.label}
+              </a>
+            </div>
+          );
+        })}
       </div>
 
       <div className="stat-grid">
@@ -132,7 +153,7 @@ export default function Dashboard() {
             <div className="empty" style={{ padding: 24 }}>
               <b>No clients yet</b>
               <p>You haven&apos;t added any clients yet.</p>
-              <a className="btn primary" href="/clients?new=1">Add Your First Client</a>
+              <a className="btn ghost" href="/clients?new=1">Add Your First Client</a>
             </div>
           )}
         </div>

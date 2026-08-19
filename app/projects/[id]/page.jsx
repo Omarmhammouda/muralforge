@@ -5,6 +5,7 @@ import { useState } from "react";
 import AppShell from "@/components/AppShell";
 import ProjectModal from "@/components/ProjectModal";
 import { money, shortDate, timeAgo } from "@/lib/format";
+import { effectiveStatus } from "@/lib/proposal-factory";
 import { PROJECT_STATUSES, actions, clientName, proposalTotals, useData } from "@/lib/store";
 
 export default function ProjectWorkspace() {
@@ -32,6 +33,45 @@ export default function ProjectWorkspace() {
     proposals.some((p) => a.text.includes(p.name || p.number)),
   );
 
+  let nudge = null;
+  if (mockups.length === 0) {
+    nudge = (
+      <div className="nudge">
+        <span><b>Next step:</b> create a mockup for this wall.</span>
+        <a className="btn primary mini" href={`/studio?project=${id}`}>Open studio</a>
+      </div>
+    );
+  } else if (proposals.length === 0) {
+    nudge = (
+      <div className="nudge">
+        <span><b>Next step:</b> turn your mockup into a proposal.</span>
+        <a className="btn primary mini" href={`/proposals?new=1&project=${id}`}>Create proposal</a>
+      </div>
+    );
+  } else if (proposals.every((p) => effectiveStatus(p) === "Draft")) {
+    const newestProposal = [...proposals].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))[0];
+    nudge = (
+      <div className="nudge">
+        <span><b>Almost there:</b> your proposal is drafted — review and send it.</span>
+        <a className="btn primary mini" href={`/proposals/${newestProposal.id}`}>Open proposal</a>
+      </div>
+    );
+  } else if (proposals.some((p) => effectiveStatus(p) === "Sent" || effectiveStatus(p) === "Viewed")) {
+    nudge = (
+      <div className="nudge">
+        <span><b>Waiting on the client.</b> You&apos;ll see status changes here.</span>
+      </div>
+    );
+  } else if (proposals.every((p) => ["Rejected", "Expired"].includes(effectiveStatus(p)))) {
+    const newestProposal = [...proposals].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))[0];
+    nudge = (
+      <div className="nudge">
+        <span><b>No active proposal.</b> Your proposals were rejected or expired — revise one and resend it.</span>
+        <a className="btn primary mini" href={`/proposals/${newestProposal.id}`}>Open proposal</a>
+      </div>
+    );
+  }
+
   return (
     <AppShell
       title={project.name}
@@ -49,6 +89,8 @@ export default function ProjectWorkspace() {
         </>
       }
     >
+      {nudge}
+
       <div className="two-col">
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div className="card">
@@ -101,7 +143,7 @@ export default function ProjectWorkspace() {
               <div className="empty" style={{ padding: 24 }}>
                 <b>No mockups yet</b>
                 <p>Upload a wall photo and start visualizing the mural.</p>
-                <a className="btn primary" href={`/studio?project=${id}`}>Create Mockup</a>
+                <a className="btn ghost" href={`/studio?project=${id}`}>Create Mockup</a>
               </div>
             )}
           </div>
@@ -126,7 +168,7 @@ export default function ProjectWorkspace() {
               <div className="empty" style={{ padding: 24 }}>
                 <b>No proposals yet</b>
                 <p>Create a professional proposal with your mural designs, scope, timeline, and pricing.</p>
-                <a className="btn primary" href={`/proposals?new=1&project=${id}`}>Create Proposal</a>
+                <a className="btn ghost" href={`/proposals?new=1&project=${id}`}>Create Proposal</a>
               </div>
             )}
           </div>

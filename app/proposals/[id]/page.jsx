@@ -32,7 +32,7 @@ export default function ProposalBuilder() {
   const data = useData();
   const { id } = useParams();
   const [draft, setDraft] = useState(null);
-  const [tab, setTab] = useState("edit");
+  const [step, setStep] = useState(1);
   const [saving, setSaving] = useState("");
   const [images, setImages] = useState({});
   const [upgrade, setUpgrade] = useState(false);
@@ -117,7 +117,7 @@ export default function ProposalBuilder() {
   const docWatermark = exportPolicy(data, draft.projectId).watermark;
 
   function doPrint() {
-    setTab("preview");
+    setStep(4);
     setTimeout(() => window.print(), 300);
     actions.billingRecordUsage("pdfExports");
   }
@@ -130,6 +130,24 @@ export default function ProposalBuilder() {
     }
     doPrint();
   }
+
+  const stepLabels = ["Basics", "Scope & pricing", "Terms", "Preview & send"];
+
+  const stepNav = (
+    <div className="step-nav">
+      <button
+        className="btn ghost"
+        style={{ visibility: step > 1 ? "visible" : "hidden" }}
+        disabled={step === 1}
+        onClick={() => setStep((s) => Math.max(1, s - 1))}
+      >
+        ← Back
+      </button>
+      <button className="btn primary" onClick={() => setStep((s) => Math.min(4, s + 1))}>
+        Next →
+      </button>
+    </div>
+  );
 
   return (
     <AppShell
@@ -157,16 +175,27 @@ export default function ProposalBuilder() {
       }
     >
       <div className="toolbar no-print">
-        <div className="seg">
-          <button className={tab === "edit" ? "on" : ""} onClick={() => setTab("edit")}>Edit</button>
-          <button className={tab === "preview" ? "on" : ""} onClick={() => setTab("preview")}>Preview</button>
+        <div className="steps-rail">
+          {stepLabels.map((label, index) => {
+            const n = index + 1;
+            return (
+              <button
+                key={label}
+                className={`step-chip${step === n ? " active" : ""}${n < step ? " done" : ""}`}
+                onClick={() => setStep(n)}
+              >
+                <span className="n">{n}</span>
+                {label}
+              </button>
+            );
+          })}
         </div>
         <div className="spacer" />
         <span className="badge">{effectiveStatus(draft)}</span>
         <span className="saving-note">{draft.number}</span>
       </div>
 
-      {tab === "edit" ? (
+      {step === 1 ? (
         <div className="no-print" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div className="card">
             <h3>Details</h3>
@@ -250,7 +279,12 @@ export default function ProposalBuilder() {
               </p>
             )}
           </div>
+          {stepNav}
+        </div>
+      ) : null}
 
+      {step === 2 ? (
+        <div className="no-print" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div className="card">
             <h3>Scope of work</h3>
             {draft.scope.map((section, index) => (
@@ -356,7 +390,12 @@ export default function ProposalBuilder() {
               </label>
             </div>
           </div>
+          {stepNav}
+        </div>
+      ) : null}
 
+      {step === 3 ? (
+        <div className="no-print" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div className="card">
             <h3>Terms &amp; conditions</h3>
             <textarea
@@ -366,20 +405,28 @@ export default function ProposalBuilder() {
               onChange={(e) => patch({ terms: e.target.value })}
             />
           </div>
+          {stepNav}
         </div>
-      ) : (
-        <ProposalDocument
-          draft={draft}
-          client={client}
-          project={project}
-          settings={settings}
-          totals={totals}
-          selectedMockups={selectedMockups}
-          images={images}
-          heroSrc={heroSrc}
-          watermark={docWatermark}
-        />
-      )}
+      ) : null}
+
+      {step === 4 ? (
+        <>
+          <ProposalDocument
+            draft={draft}
+            client={client}
+            project={project}
+            settings={settings}
+            totals={totals}
+            selectedMockups={selectedMockups}
+            images={images}
+            heroSrc={heroSrc}
+            watermark={docWatermark}
+          />
+          <div className="step-nav no-print">
+            <button className="btn ghost" onClick={() => setStep(3)}>← Back</button>
+          </div>
+        </>
+      ) : null}
 
       {upgrade ? (
         <UpgradeModal
